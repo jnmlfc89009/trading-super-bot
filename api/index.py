@@ -217,7 +217,11 @@ def build_instant_alert_message(stats):
     corr_pass = stats["correlation"] >= 0.70
     
     strength = "🚨 EXTREME" if abs(z) > 3.0 else ("🔥 STRONG" if abs(z) > 2.0 else "👀 MONITORING")
-    if z > 0:
+    
+    if not coint_pass or not corr_pass:
+        direction = "🛑 DO NOT TRADE (Failed Metrics)"
+        strength = "❌ INVALID SIGNAL"
+    elif z > 0:
         direction = f"SELL {stats['ticker_a']}, BUY {stats['ticker_b']}"
     else:
         direction = f"BUY {stats['ticker_a']}, SELL {stats['ticker_b']}"
@@ -338,12 +342,13 @@ def multi_compare(tickers: str, lookback: str = "1y"):
     }
 
 @app.get("/api/scan")
-async def run_scan():
+async def run_scan(send_telegram: bool = False):
     results = []
     pairs = load_pairs()
     
     if not pairs:
-        await send_telegram_alert("⚠️ No pairs in database. Add pairs via the Dashboard.")
+        if send_telegram:
+            await send_telegram_alert("⚠️ No pairs in database. Add pairs via the Dashboard.")
         return {"status": "success", "message": "No pairs to scan.", "data": []}
         
     for pair_id, details in pairs.items():
@@ -352,11 +357,12 @@ async def run_scan():
         stats["pair_id"] = pair_id
         results.append(stats)
         
-    # Build and send the daily report
-    report_msg = build_daily_report(results)
-    await send_telegram_alert(report_msg)
+    if send_telegram:
+        # Build and send the daily report only if specifically requested by the cron scheduler
+        report_msg = build_daily_report(results)
+        await send_telegram_alert(report_msg)
             
-    return {"status": "success", "message": "Daily report sent.", "data": results}
+    return {"status": "success", "message": "Scan complete.", "data": results}
 
 @app.post("/api/scan/{pair_id}")
 async def run_instant_scan(pair_id: str):
