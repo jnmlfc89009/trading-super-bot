@@ -30,7 +30,7 @@ app.add_middleware(
 
 # Initialize Firestore
 try:
-    firebase_admin.initialize_app()
+    firebase_admin.initialize_app(options={'projectId': 'trading-super-bot'})
     db = firestore.client()
 except ValueError:
     db = firestore.client()

@@ -81,9 +81,12 @@ function App() {
       if (response.ok) {
         alert('Pair saved to database! It will now be tracked in the Telegram cron scans.');
         setActiveTab('dashboard');
+      } else {
+        const errData = await response.json();
+        alert(`Failed to save pair: ${errData.detail || 'Unknown error'}`);
       }
     } catch (err) {
-      alert('Failed to save pair');
+      alert(`Network error: ${err.message}`);
     }
   };
 
