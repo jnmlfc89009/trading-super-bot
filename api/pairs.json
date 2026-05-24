@@ -1,0 +1,32 @@
+{
+  "us_utilities": {
+    "ticker_a": "DUK",
+    "ticker_b": "SO",
+    "name": "US Utilities",
+    "window": 120
+  },
+  "us_payments": {
+    "ticker_a": "V",
+    "ticker_b": "MA",
+    "name": "US Payments",
+    "window": 90
+  },
+  "ai_chips": {
+    "ticker_a": "NVDA",
+    "ticker_b": "AMD",
+    "name": "AI Chips",
+    "window": 60
+  },
+  "u11.si_d05.si": {
+    "ticker_a": "U11.SI",
+    "ticker_b": "D05.SI",
+    "name": "Bank SG",
+    "window": 90
+  },
+  "hd_low": {
+    "ticker_a": "HD",
+    "ticker_b": "LOW",
+    "name": "Home",
+    "window": 90
+  }
+}
