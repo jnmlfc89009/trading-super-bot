@@ -148,34 +148,54 @@ def analyse_pair(ticker_a, ticker_b, window, include_series=False, lookback_days
 
     return result
 
-def build_signal_message(stats):
-    z = stats["z_score"]
-    coint_status = stats["coint_status"]
+def build_daily_report(stats_list):
+    actionable = []
+    monitoring = []
+    failed = []
     
-    strength = "🚨 EXTREME" if abs(z) > 3.0 else ("🔥 STRONG" if abs(z) > 2.5 else "⚠️ MODERATE")
-    direction = f"SELL {stats['ticker_a']} / BUY {stats['ticker_b']}" if z > 0 else f"BUY {stats['ticker_a']} / SELL {stats['ticker_b']}"
+    for stats in stats_list:
+        if "error" in stats:
+            failed.append(f"• {stats['name']} (Data Error)")
+            continue
+            
+        z = stats["z_score"]
+        coint_pass = stats["adf_pvalue"] < 0.10
+        corr_pass = stats["correlation"] >= 0.70
+        
+        pair_str = f"{stats['ticker_a']}/{stats['ticker_b']}"
+        
+        if coint_pass and corr_pass:
+            if abs(z) >= 2.0:
+                direction = f"SELL {stats['ticker_a']}, BUY {stats['ticker_b']}" if z > 0 else f"BUY {stats['ticker_a']}, SELL {stats['ticker_b']}"
+                actionable.append(f"• *{pair_str}*: Z={z:+.2f} | p={stats['adf_pvalue']:.2f} | {direction}")
+            else:
+                monitoring.append(f"• {pair_str}: Z={z:+.2f} | p={stats['adf_pvalue']:.2f}")
+        else:
+            failed.append(f"• {pair_str} (p={stats['adf_pvalue']:.2f}, corr={stats['correlation']:.2f})")
+            
+    # Build Message
+    msg = "📅 *Daily Stat Arb Briefing*\n\n"
     
-    return f"""
-🔔 *PAIRS TRADING ALERT: {stats['name']}*
-
-📊 *Signal Metrics*
-  • Z-Score:       `{z:+.2f} σ`  {strength}
-  • Correlation:   `{stats['correlation']:.2f}`
-  • Hedge Ratio β: `{stats['hedge_ratio']:.3f}`
-  • Window:        `{stats['window']}-day rolling`
-  • {direction}
-
-🧪 *Cointegration (ADF Test)*
-  • Status:  {coint_status}
-  • p-value: `{stats['adf_pvalue']:.4f}`
-"""
+    if actionable:
+        msg += "🚨 *ACTIONABLE SIGNALS*\n" + "\n".join(actionable) + "\n\n"
+    else:
+        msg += "🚨 *ACTIONABLE SIGNALS*\n• None today.\n\n"
+        
+    if monitoring:
+        msg += "👀 *MONITORING (Z < 2.0)*\n" + "\n".join(monitoring) + "\n\n"
+        
+    if failed:
+        msg += "❌ *FAILED COINTEGRATION / CORR*\n" + "\n".join(failed) + "\n\n"
+        
+    msg += "📱 [Open Super App Dashboard](https://trading-super-bot.vercel.app/)"
+    return msg
 
 async def send_telegram_alert(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("Telegram credentials not configured. Skipping alert.")
         return
     bot = Bot(token=TELEGRAM_TOKEN)
-    await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode='Markdown')
+    await bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode='Markdown', disable_web_page_preview=True)
 
 @app.get("/api/pairs")
 def get_pairs():
@@ -265,28 +285,20 @@ def multi_compare(tickers: str, lookback: str = "1y"):
 @app.get("/api/scan")
 async def run_scan():
     results = []
-    signals_sent = 0
     pairs = load_pairs()
+    
+    if not pairs:
+        await send_telegram_alert("⚠️ No pairs in database. Add pairs via the Dashboard.")
+        return {"status": "success", "message": "No pairs to scan."}
+        
     for pair_id, details in pairs.items():
         stats = analyse_pair(details['ticker_a'], details['ticker_b'], details['window'], include_series=False)
         stats["name"] = details["name"]
         stats["pair_id"] = pair_id
         results.append(stats)
         
-        # Check if we should trigger a telegram signal
-        if "error" not in stats:
-            z = stats["z_score"]
-            coint_pass = stats["adf_pvalue"] < 0.10
-            corr_pass = stats["correlation"] >= 0.70
+    # Build and send the daily report
+    report_msg = build_daily_report(results)
+    await send_telegram_alert(report_msg)
             
-            if abs(z) >= 2.0 and coint_pass and corr_pass:
-                msg = build_signal_message(stats)
-                await send_telegram_alert(msg)
-                signals_sent += 1
-                
-    if signals_sent == 0:
-        day_of_week = datetime.today().weekday()
-        if day_of_week in [0, 4]:
-            await send_telegram_alert("✅ *Super Trading App Health Check*\nScan complete. All systems nominal. No signals found today.")
-            
-    return {"status": "success", "signals_triggered": signals_sent, "data": results}
+    return {"status": "success", "message": "Daily report sent.", "data": results}
