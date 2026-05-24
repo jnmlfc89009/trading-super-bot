@@ -11,6 +11,8 @@ import yfinance as yf
 from dotenv import load_dotenv
 from telegram import Bot
 import asyncio
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -26,17 +28,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-PAIRS_FILE = os.path.join(os.path.dirname(__file__), "pairs.json")
+# Initialize Firestore
+try:
+    firebase_admin.initialize_app()
+    db = firestore.client()
+except ValueError:
+    db = firestore.client()
+except Exception as e:
+    print(f"Failed to initialize Firebase: {e}")
+    db = None
 
 def load_pairs():
-    if not os.path.exists(PAIRS_FILE):
+    if not db:
+        print("Database not connected.")
         return {}
-    with open(PAIRS_FILE, "r") as f:
-        return json.load(f)
-
-def save_pairs(pairs):
-    with open(PAIRS_FILE, "w") as f:
-        json.dump(pairs, f, indent=2)
+    pairs = {}
+    try:
+        docs = db.collection('pairs').stream()
+        for doc in docs:
+            pairs[doc.id] = doc.to_dict()
+    except Exception as e:
+        print(f"Firestore read error: {e}")
+    return pairs
 
 class PairCreate(BaseModel):
     ticker_a: str
@@ -203,25 +216,30 @@ def get_pairs():
 
 @app.post("/api/pairs")
 def add_pair(pair: PairCreate):
-    pairs = load_pairs()
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not connected")
     pair_id = f"{pair.ticker_a.lower()}_{pair.ticker_b.lower()}"
-    pairs[pair_id] = {
+    data = {
         "ticker_a": pair.ticker_a.upper(),
         "ticker_b": pair.ticker_b.upper(),
         "name": pair.name,
         "window": pair.window
     }
-    save_pairs(pairs)
-    return {"status": "success", "message": f"Added {pair.name}"}
+    try:
+        db.collection('pairs').document(pair_id).set(data)
+        return {"status": "success", "message": f"Added {pair.name}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/api/pairs/{pair_id}")
 def delete_pair(pair_id: str):
-    pairs = load_pairs()
-    if pair_id in pairs:
-        del pairs[pair_id]
-        save_pairs(pairs)
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    try:
+        db.collection('pairs').document(pair_id).delete()
         return {"status": "success", "message": "Deleted pair"}
-    raise HTTPException(status_code=404, detail="Pair not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/research")
 def research_pair(ticker_a: str, ticker_b: str, window: int = 60, lookback: str = "1y"):

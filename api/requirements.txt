@@ -6,3 +6,4 @@ statsmodels
 python-telegram-bot
 python-dotenv
 yfinance
+firebase-admin
