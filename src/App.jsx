@@ -39,6 +39,14 @@ function App() {
   const [mcLookback, setMcLookback] = useState(localStorage.getItem('mcLookback') || '1y');
   const [mcData, setMcData] = useState(null);
   const [mcLoading, setMcLoading] = useState(false);
+  const [mcPresets, setMcPresets] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('mcPresets')) || []; }
+    catch { return []; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mcPresets', JSON.stringify(mcPresets));
+  }, [mcPresets]);
 
   useEffect(() => {
     localStorage.setItem('mcTickers', mcTickers);
@@ -139,13 +147,14 @@ function App() {
     setAlerting(prev => ({ ...prev, [pairId]: false }));
   };
 
-  const runMultiCompare = async (e) => {
-    e.preventDefault();
-    if (!mcTickers) return;
+  const runMultiCompareWithArgs = async (tickers, lookback) => {
+    setMcTickers(tickers);
+    setMcLookback(lookback);
+    if (!tickers) return;
     setMcLoading(true);
     setMcData(null);
     try {
-      const response = await fetch(`/api/multi-compare?tickers=${mcTickers}&lookback=${mcLookback}`, { headers: getHeaders() });
+      const response = await fetch(`/api/multi-compare?tickers=${tickers}&lookback=${lookback}`, { headers: getHeaders() });
       if (response.status === 401) return handleAuthError();
       if (!response.ok) {
         const errorData = await response.json();
@@ -157,6 +166,22 @@ function App() {
       alert(err.message);
     }
     setMcLoading(false);
+  };
+
+  const runMultiCompare = async (e) => {
+    e.preventDefault();
+    runMultiCompareWithArgs(mcTickers, mcLookback);
+  };
+
+  const handleSavePreset = () => {
+    if (!mcTickers) return;
+    const name = prompt("Enter a name for this preset (e.g. Tech Giants):", mcTickers);
+    if (!name) return;
+    setMcPresets([...mcPresets, { name, tickers: mcTickers, lookback: mcLookback }]);
+  };
+
+  const handleDeletePreset = (index) => {
+    setMcPresets(mcPresets.filter((_, i) => i !== index));
   };
 
   const handleLogin = (e) => {
@@ -366,10 +391,42 @@ function App() {
                   <option value="5y">5 Years</option>
                 </select>
               </div>
-              <button type="submit" className="btn" disabled={mcLoading}>
-                {mcLoading ? 'Crunching...' : 'Compare Equities'}
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button type="submit" className="btn" disabled={mcLoading}>
+                  {mcLoading ? 'Crunching...' : 'Compare Equities'}
+                </button>
+                <button type="button" className="btn" onClick={handleSavePreset} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '10px' }} title="Save Preset">
+                  <Save size={18} />
+                </button>
+              </div>
             </form>
+
+            {mcPresets.length > 0 && (
+              <div style={{ marginBottom: '24px' }}>
+                <h3 className="subtitle" style={{ fontSize: '0.9rem', marginBottom: '12px' }}>Saved Presets</h3>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  {mcPresets.map((preset, index) => (
+                    <div 
+                      key={index} 
+                      className="glass-card" 
+                      style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', background: 'rgba(255,255,255,0.03)' }} 
+                      onClick={() => runMultiCompareWithArgs(preset.tickers, preset.lookback)}
+                    >
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{preset.name}</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--subtitle)' }}>{preset.lookback.toUpperCase()} • {preset.tickers}</div>
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); handleDeletePreset(index); }} 
+                        style={{ background: 'none', border: 'none', color: 'var(--error)', cursor: 'pointer', padding: '4px', fontSize: '1.2rem', marginLeft: 'auto' }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {mcLoading && (
               <div style={{ textAlign: 'center', padding: '40px' }} className="subtitle">
