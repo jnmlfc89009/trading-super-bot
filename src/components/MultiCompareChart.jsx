@@ -35,7 +35,7 @@ const MultiCompareChart = ({ data }) => {
             <XAxis dataKey="date" stroke="#a0a0ab" minTickGap={30} />
             <YAxis 
               stroke="#a0a0ab" 
-              tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`} 
+              tickFormatter={(value) => `$${(value / 1000).toFixed(2)}k`} 
               domain={['auto', 'auto']}
             />
             <Tooltip 

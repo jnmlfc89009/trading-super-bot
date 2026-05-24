@@ -22,7 +22,7 @@ const ChartCard = ({ data, tickerA, tickerB }) => {
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
             <XAxis dataKey="date" stroke="#a0a0ab" minTickGap={30} />
-            <YAxis stroke="#a0a0ab" domain={['dataMin - 5', 'dataMax + 5']} />
+            <YAxis stroke="#a0a0ab" domain={['dataMin - 5', 'dataMax + 5']} tickFormatter={(value) => value.toFixed(2)} />
             <Tooltip 
               contentStyle={{ backgroundColor: '#141418', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
               itemStyle={{ color: '#fff' }}
@@ -42,7 +42,7 @@ const ChartCard = ({ data, tickerA, tickerB }) => {
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
             <XAxis dataKey="date" stroke="#a0a0ab" minTickGap={30} />
-            <YAxis stroke="#a0a0ab" domain={[-4, 4]} />
+            <YAxis stroke="#a0a0ab" domain={[-4, 4]} tickFormatter={(value) => value.toFixed(2)} />
             <Tooltip 
               contentStyle={{ backgroundColor: '#141418', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
               formatter={(value, name) => [value.toFixed(2), name]}
