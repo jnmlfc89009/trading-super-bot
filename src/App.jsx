@@ -35,10 +35,18 @@ function App() {
   const [rLoading, setRLoading] = useState(false);
 
   // Multi-Compare State
-  const [mcTickers, setMcTickers] = useState('');
-  const [mcLookback, setMcLookback] = useState('1y');
+  const [mcTickers, setMcTickers] = useState(localStorage.getItem('mcTickers') || '');
+  const [mcLookback, setMcLookback] = useState(localStorage.getItem('mcLookback') || '1y');
   const [mcData, setMcData] = useState(null);
   const [mcLoading, setMcLoading] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('mcTickers', mcTickers);
+  }, [mcTickers]);
+
+  useEffect(() => {
+    localStorage.setItem('mcLookback', mcLookback);
+  }, [mcLookback]);
 
   useEffect(() => {
     if (activeTab === 'dashboard') fetchScan();
