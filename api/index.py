@@ -226,10 +226,12 @@ def build_instant_alert_message(stats):
     if not coint_pass or not corr_pass:
         direction = "🛑 DO NOT TRADE (Failed Metrics)"
         strength = "❌ INVALID SIGNAL"
-    elif z > 0:
+    elif z >= 2.0:
         direction = f"SELL {stats['ticker_a']}, BUY {stats['ticker_b']}"
-    else:
+    elif z <= -2.0:
         direction = f"BUY {stats['ticker_a']}, SELL {stats['ticker_b']}"
+    else:
+        direction = "⚖️ WAITING FOR DEVIATION (No Action)"
         
     coint_status = "✅ PASS" if coint_pass else "❌ FAIL"
     corr_status = "✅ PASS" if corr_pass else "❌ FAIL"
