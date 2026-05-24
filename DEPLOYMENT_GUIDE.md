@@ -55,7 +55,7 @@ Because Cloud Run goes to sleep when no one is using it, you need an "alarm cloc
 Once your backend is successfully deployed, run this command in your terminal to create a **Google Cloud Scheduler** job. It will ping your server at exactly 9:00 AM Singapore time (UTC+8) every Monday through Friday (`0 9 * * 1-5`):
 
 ```bash
-gcloud scheduler jobs create http daily-stat-arb-scan --schedule="0 9 * * 1-5" --time-zone="Asia/Singapore" --location="us-central1" --uri="https://super-trading-bot-105897008393.us-central1.run.app/api/scan?send_telegram=true" --http-method=GET
+gcloud scheduler jobs create http daily-stat-arb-scan --schedule="0 9 * * 1-5" --time-zone="Asia/Singapore" --location="us-central1" --uri="https://super-trading-bot-105897008393.us-central1.run.app/api/scan?send_telegram=true" --http-method=GET --headers="X-Passcode=97317982"
 ```
 
 *(Note: If your terminal asks you to enable the Cloud Scheduler API, just press `y` and hit Enter!)*

@@ -10,6 +10,20 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [alerting, setAlerting] = useState({});
+  const [passcode, setPasscode] = useState(localStorage.getItem('app_passcode') || '');
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('app_passcode'));
+
+  const getHeaders = () => ({
+    'Content-Type': 'application/json',
+    'x-passcode': passcode
+  });
+
+  const handleAuthError = () => {
+    localStorage.removeItem('app_passcode');
+    setIsAuthenticated(false);
+    setPasscode('');
+    alert('Session expired or Invalid Passcode. Please login again.');
+  };
 
   // Research State
   const [rTickerA, setRTickerA] = useState('');
@@ -34,12 +48,13 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/scan');
+      const response = await fetch('/api/scan', { headers: getHeaders() });
+      if (response.status === 401) return handleAuthError();
       if (!response.ok) throw new Error(`API returned status ${response.status}`);
       const result = await response.json();
       setData(result);
     } catch (err) {
-      setError("Failed to fetch data. Is the Tiingo API Key set in the .env file?");
+      setError("Failed to fetch data. Is the backend deployed and API key set?");
     }
     setLoading(false);
   };
@@ -50,7 +65,8 @@ function App() {
     setRLoading(true);
     setRData(null);
     try {
-      const response = await fetch(`/api/research?ticker_a=${rTickerA}&ticker_b=${rTickerB}&window=${rWindow}&lookback=${rLookback}`);
+      const response = await fetch(`/api/research?ticker_a=${rTickerA}&ticker_b=${rTickerB}&window=${rWindow}&lookback=${rLookback}`, { headers: getHeaders() });
+      if (response.status === 401) return handleAuthError();
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Research failed');
@@ -70,7 +86,7 @@ function App() {
     try {
       const response = await fetch('/api/pairs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getHeaders(),
         body: JSON.stringify({
           ticker_a: rData.ticker_a,
           ticker_b: rData.ticker_b,
@@ -78,6 +94,7 @@ function App() {
           window: rData.window
         })
       });
+      if (response.status === 401) return handleAuthError();
       if (response.ok) {
         alert('Pair saved to database! It will now be tracked in the Telegram cron scans.');
         setActiveTab('dashboard');
@@ -93,7 +110,8 @@ function App() {
   const deletePair = async (pairId) => {
     if (!window.confirm("Delete this pair from tracked database?")) return;
     try {
-      await fetch(`/api/pairs/${pairId}`, { method: 'DELETE' });
+      const response = await fetch(`/api/pairs/${pairId}`, { method: 'DELETE', headers: getHeaders() });
+      if (response.status === 401) return handleAuthError();
       fetchScan();
     } catch (err) {
       alert('Failed to delete pair');
@@ -103,7 +121,8 @@ function App() {
   const sendInstantAlert = async (pairId) => {
     setAlerting(prev => ({ ...prev, [pairId]: true }));
     try {
-      const response = await fetch(`/api/scan/${pairId}`, { method: 'POST' });
+      const response = await fetch(`/api/scan/${pairId}`, { method: 'POST', headers: getHeaders() });
+      if (response.status === 401) return handleAuthError();
       if (!response.ok) throw new Error('Failed to send alert');
       alert('Alert sent to your Telegram! 📱');
     } catch (err) {
@@ -118,7 +137,8 @@ function App() {
     setMcLoading(true);
     setMcData(null);
     try {
-      const response = await fetch(`/api/multi-compare?tickers=${mcTickers}&lookback=${mcLookback}`);
+      const response = await fetch(`/api/multi-compare?tickers=${mcTickers}&lookback=${mcLookback}`, { headers: getHeaders() });
+      if (response.status === 401) return handleAuthError();
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.detail || 'Multi-compare failed');
@@ -130,6 +150,35 @@ function App() {
     }
     setMcLoading(false);
   };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    localStorage.setItem('app_passcode', passcode);
+    setIsAuthenticated(true);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <div className="glass-card" style={{ maxWidth: '400px', width: '100%', textAlign: 'center', padding: '40px 20px' }}>
+          <h2>Security Lock</h2>
+          <p className="subtitle" style={{ marginBottom: '24px' }}>Enter your master passcode to access the trading engine.</p>
+          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <input 
+              type="password" 
+              value={passcode} 
+              onChange={e => setPasscode(e.target.value)} 
+              placeholder="Enter Passcode" 
+              className="input-field"
+              required 
+              autoFocus
+            />
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>Unlock Engine</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container">
