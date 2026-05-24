@@ -84,8 +84,8 @@ def fetch_yfinance_history(ticker: str, days: int):
 
 def analyse_pair(ticker_a, ticker_b, window, include_series=False, lookback_days=365):
     """Run the math engine on two tickers."""
-    # Ensure we fetch enough calendar days to cover the trading day window (x1.5 buffer)
-    fetch_days = max(lookback_days, int(window * 1.5) + 30)
+    # Fetch enough calendar days to cover the requested lookback PLUS the rolling window buffer
+    fetch_days = lookback_days + int(window * 1.5) + 30
     
     close_a = fetch_yfinance_history(ticker_a, fetch_days)
     close_b = fetch_yfinance_history(ticker_b, fetch_days)
@@ -146,6 +146,11 @@ def analyse_pair(ticker_a, ticker_b, window, include_series=False, lookback_days
     if include_series:
         # Prepare arrays for charts
         z_series_clean = z_series.dropna()
+        
+        # Trim the chart data exactly to the requested lookback period (removing the calculation buffer)
+        start_date_chart = pd.Timestamp.today().tz_localize(None) - pd.Timedelta(days=lookback_days)
+        z_series_clean = z_series_clean[z_series_clean.index >= start_date_chart]
+        
         dates = z_series_clean.index.strftime('%Y-%m-%d').tolist()
         
         # Normalized prices for growth chart (start at 100)
