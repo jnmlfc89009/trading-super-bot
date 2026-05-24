@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import PairCard from './components/PairCard';
 import ChartCard from './components/ChartCard';
 import MultiCompareChart from './components/MultiCompareChart';
-import { Search, LayoutDashboard, Save, Trash2, LineChart as LineChartIcon } from 'lucide-react';
+import { Search, LayoutDashboard, Save, Trash2, LineChart as LineChartIcon, Smartphone } from 'lucide-react';
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [alerting, setAlerting] = useState({});
 
   // Research State
   const [rTickerA, setRTickerA] = useState('');
@@ -96,6 +97,18 @@ function App() {
     }
   };
 
+  const sendInstantAlert = async (pairId) => {
+    setAlerting(prev => ({ ...prev, [pairId]: true }));
+    try {
+      const response = await fetch(`/api/scan/${pairId}`, { method: 'POST' });
+      if (!response.ok) throw new Error('Failed to send alert');
+      alert('Alert sent to your Telegram! 📱');
+    } catch (err) {
+      alert('Failed to send instant alert. Ensure backend is deployed.');
+    }
+    setAlerting(prev => ({ ...prev, [pairId]: false }));
+  };
+
   const runMultiCompare = async (e) => {
     e.preventDefault();
     if (!mcTickers) return;
@@ -180,13 +193,23 @@ function App() {
                   <div key={idx} style={{ position: 'relative' }}>
                     <PairCard pair={pair} />
                     {!pair.error && (
-                      <button 
-                        onClick={() => deletePair(pair.pair_id)}
-                        style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-                        title="Remove pair from tracking"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div style={{ position: 'absolute', top: '16px', right: '16px', display: 'flex', gap: '8px' }}>
+                        <button 
+                          onClick={() => sendInstantAlert(pair.pair_id)}
+                          style={{ background: 'transparent', border: 'none', color: alerting[pair.pair_id] ? 'var(--accent)' : 'var(--text-muted)', cursor: 'pointer' }}
+                          title="Send instant alert to phone"
+                          disabled={alerting[pair.pair_id]}
+                        >
+                          <Smartphone size={18} />
+                        </button>
+                        <button 
+                          onClick={() => deletePair(pair.pair_id)}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                          title="Remove pair from tracking"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}

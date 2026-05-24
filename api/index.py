@@ -203,6 +203,38 @@ def build_daily_report(stats_list):
     msg += "📱 [Open Super App Dashboard](https://trading-super-bot.vercel.app/)"
     return msg
 
+def build_instant_alert_message(stats):
+    if "error" in stats:
+        return f"⚠️ *Error fetching data for {stats.get('name', 'Pair')}*: {stats['error']}"
+        
+    z = stats["z_score"]
+    coint_pass = stats["adf_pvalue"] < 0.10
+    corr_pass = stats["correlation"] >= 0.70
+    
+    strength = "🚨 EXTREME" if abs(z) > 3.0 else ("🔥 STRONG" if abs(z) > 2.0 else "👀 MONITORING")
+    if z > 0:
+        direction = f"SELL {stats['ticker_a']}, BUY {stats['ticker_b']}"
+    else:
+        direction = f"BUY {stats['ticker_a']}, SELL {stats['ticker_b']}"
+        
+    coint_status = "✅ PASS" if coint_pass else "❌ FAIL"
+    corr_status = "✅ PASS" if corr_pass else "❌ FAIL"
+
+    return f"""
+🔔 *ON-DEMAND SCAN: {stats['name']}*
+
+📊 *Signal Metrics*
+  • Z-Score:       `{z:+.2f} σ`  {strength}
+  • Correlation:   `{stats['correlation']:.2f}`  {corr_status}
+  • Hedge Ratio β: `{stats['hedge_ratio']:.3f}`
+  • Action:        *{direction}*
+
+🧪 *Cointegration (Engle-Granger)*
+  • p-value: `{stats['adf_pvalue']:.4f}`  {coint_status}
+  
+📱 [Open Super App Dashboard](https://trading-super-bot.vercel.app/)
+"""
+
 async def send_telegram_alert(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
         print("Telegram credentials not configured. Skipping alert.")
@@ -320,3 +352,23 @@ async def run_scan():
     await send_telegram_alert(report_msg)
             
     return {"status": "success", "message": "Daily report sent.", "data": results}
+
+@app.post("/api/scan/{pair_id}")
+async def run_instant_scan(pair_id: str):
+    if not db:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    
+    doc_ref = db.collection('pairs').document(pair_id)
+    doc = doc_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Pair not found")
+        
+    details = doc.to_dict()
+    stats = analyse_pair(details['ticker_a'], details['ticker_b'], details['window'], include_series=False)
+    stats["name"] = details["name"]
+    stats["pair_id"] = pair_id
+    
+    msg = build_instant_alert_message(stats)
+    await send_telegram_alert(msg)
+    
+    return {"status": "success", "message": "Instant alert sent!"}
