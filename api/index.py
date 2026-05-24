@@ -339,7 +339,7 @@ async def run_scan():
     
     if not pairs:
         await send_telegram_alert("⚠️ No pairs in database. Add pairs via the Dashboard.")
-        return {"status": "success", "message": "No pairs to scan."}
+        return {"status": "success", "message": "No pairs to scan.", "data": []}
         
     for pair_id, details in pairs.items():
         stats = analyse_pair(details['ticker_a'], details['ticker_b'], details['window'], include_series=False)

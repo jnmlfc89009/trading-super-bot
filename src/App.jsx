@@ -186,10 +186,10 @@ function App() {
 
             {data && data.status === "success" && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                {data.data.length === 0 && (
+                {(!data.data || data.data.length === 0) && (
                   <div className="glass-card subtitle" style={{ textAlign: 'center' }}>No pairs tracked yet. Go to Research to add some!</div>
                 )}
-                {data.data.map((pair, idx) => (
+                {data.data && data.data.map((pair, idx) => (
                   <div key={idx} style={{ position: 'relative' }}>
                     <PairCard pair={pair} />
                     {!pair.error && (
