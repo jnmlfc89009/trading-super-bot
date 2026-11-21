@@ -7,7 +7,9 @@ This document serves as a historical record of the infrastructure and features b
 - **Frontend (The Dashboard)**: A modern React application deployed on Vercel. It features a Tracked Pairs Dashboard, a Research Hub for testing new combinations, and a Multi-Compare Equity Curve Analyzer.
 - **Database**: Google Cloud Firestore NoSQL database for persisting tracked pairs across sessions and servers.
 - **Automation**: A Google Cloud Scheduler "Alarm Clock" triggers a daily End-of-Day (EOD) scan at exactly 09:00 AM SGT. It processes all tracked pairs and blasts a consolidated Daily Briefing to your phone via Telegram.
-- **Full-Stack Security**: A cryptographic passcode lock secures both the UI and the API. The FastAPI server requires a secret `X-Passcode` header for all requests. Unauthorized traffic is instantly blocked (`401 Unauthorized`), while the Cloud Scheduler securely bypasses it.
+- **Authentication**: Formerly secured by a passcode lock (`97317982`); the passcode gate has been completely removed from both UI and API for friction-free access.
+- **Git & Authentication Isolation**: Dedicated SSH host (`github-personal`) mapped to `id_ed25519_personal` ensuring complete isolation from work/company accounts.
+- **Current Operational Status**: Cloud resources (Cloud Run, Cloud Scheduler, Vercel) have been shut down; the full code is preserved in GitHub (`jnmlfc89009/trading-super-bot`).
 
 ## ✨ Key Features & Fixes Built
 1. **Instant Telegram Alerts**: Added a "Send to Phone 📱" button to push deep-dive statistical metrics directly to your pocket on-demand.
