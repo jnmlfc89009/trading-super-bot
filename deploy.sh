@@ -30,6 +30,6 @@ gcloud run deploy super-trading-bot \
   --platform managed \
   --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars TELEGRAM_TOKEN="${TELEGRAM_TOKEN}",TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID}",APP_PASSCODE="${APP_PASSCODE:-97317982}"
+  --set-env-vars TELEGRAM_TOKEN="${TELEGRAM_TOKEN}",TELEGRAM_CHAT_ID="${TELEGRAM_CHAT_ID}"
 
 echo "✅ Deployment Complete!"

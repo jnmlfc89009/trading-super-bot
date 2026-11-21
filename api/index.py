@@ -3,7 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from fastapi import FastAPI, HTTPException, Header, Depends
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from statsmodels.tsa.stattools import adfuller, coint
@@ -17,13 +17,7 @@ from firebase_admin import credentials, firestore
 load_dotenv()
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-APP_PASSCODE = os.getenv("APP_PASSCODE", "97317982")
-
-async def verify_passcode(x_passcode: str = Header(default=None)):
-    if x_passcode != APP_PASSCODE:
-        raise HTTPException(status_code=401, detail="Unauthorized: Invalid Passcode")
-
-app = FastAPI(title="Super Trading App API", dependencies=[Depends(verify_passcode)])
+app = FastAPI(title="Super Trading App API")
 
 app.add_middleware(
     CORSMiddleware,
