@@ -26,6 +26,7 @@ docker push $IMAGE_NAME
 
 echo "🚀 3. Deploying to Google Cloud Run..."
 gcloud run deploy super-trading-bot \
+  --project $PROJECT_ID \
   --image $IMAGE_NAME \
   --platform managed \
   --region us-central1 \
